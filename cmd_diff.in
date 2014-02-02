@@ -1,0 +1,73 @@
+# cmd_diff
+# Module for port(1)
+# SUMMARY: generate diff against original port version
+#
+# $Id: cmd_diff.in,v 1.2 2009/09/09 19:58:30 skolobov Exp $
+#
+
+# Check if this script is run via port(1)
+if [ "${PORTTOOLS}" = "" ]
+then
+	echo "This script should be run via port(1) front-end"
+	exit 1
+fi
+
+# Usage
+usage ()
+{
+cat << EOF
+FreeBSD Port Tools __VERSION__
+Usage: port diff [-h] [-d <diff mode>]
+	-h	- Display this usage summary
+	-d <diff mode> - Select diff generation mode:
+		SVN - against SVN
+		<dir> - against Ports tree in <dir>
+		<pattern> - against original port in <pwd><pattern>
+EOF
+}
+
+
+# Parse command line arguments
+ARGS=`/usr/bin/getopt hd: $*`
+if [ $? != 0 ]
+then
+	echo "Error: invalid arguments"
+	usage
+	exit 2
+fi
+
+set -- $ARGS
+while [ x"$1" != x"--" -a x"$1" != x"" ]
+do
+	i=$1
+	case "$i" in
+	# help
+	-h)
+		usage
+		exit 0
+		;;
+	# diff mode
+	-d)
+		DIFF_MODE=$2
+		shift
+		shift
+		;;
+	esac
+done
+
+# Generate diff
+. ${SCRIPT_DIR}/util_diff
+
+# View patch using specified viewer
+if [ "${DIFF_VIEWER}" = "" ]
+then
+	DIFF_VIEWER=`which cdiff`
+	[ -n "${DIFF_VIEWER}" ] || DIFF_VIEWER="more"
+fi
+echo "===> Viewing diff with ${DIFF_VIEWER}"
+${DIFF_VIEWER} < ${PATCH}
+
+# Cleanup
+rm -rf ${TEMPROOT}
+echo "===> Done"
+exit 0

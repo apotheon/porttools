@@ -1,0 +1,34 @@
+# cmd_create
+# Module for port(1)
+# SUMMARY: create new port from template using newfile(1)
+# 
+# $Id: cmd_create.in,v 1.4 2006/05/06 11:29:59 skolobov Exp $
+#
+
+# Check if this script is run via port(1)
+if [ "${PORTTOOLS}" = "" ]; then
+	echo "This script should be run via port(1) front-end"
+	exit 1
+fi
+
+# Check to see if newfile(1) exists in PATH
+if [ "`which newfile`" = "" ]; then
+	echo "newfile(1) not found - please install devel/newfile port"
+	exit 1
+fi
+
+PORTNAME=$1
+# Check if port name was supplied
+if [ "${PORTNAME}" = "" ]; then
+	echo "Error: port name not specified"
+	exit 1
+fi
+
+# Check if specified dir already exist
+if [ -e "${PORTNAME}" ]; then
+	echo "Error: ${PORTNAME} already exists"
+	exit 1
+fi
+
+# Run newfile(1)
+newfile --author="${FULLNAME}" --email="${EMAIL}" -pport."${PORTNAME}"

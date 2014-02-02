@@ -1,0 +1,369 @@
+.\" Copyright (c) 2003, Sergei Kolobov
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $Id: port.1,v 1.2 2004/08/06 21:53:54 skolobov Exp $
+.\"
+.Dd October 20, 2003
+.Dt PORT 1
+.Os
+.Sh NAME
+.Nm port
+.Nd FreeBSD Port Tools front-end script
+.Sh SYNOPSIS
+.Nm
+.Ar command
+.Op options
+.Sh DESCRIPTION
+.Nm
+simplifies testing and submitting Problem Reports (PRs) 
+with a new FreeBSD port, or change/update to an existing ports.
+.Pp
+.Nm
+has the following commands:
+.Bl -tag -width ".Ar submit"
+.It Ar create
+create a new port from a template using
+.Xr newfile 1
+.It Ar diff
+generate diff against original port version
+.It Ar fetch
+fetch distfile(s) of new port version
+.It Ar help
+display summary for 
+.Nm
+commands
+.It Ar submit
+submit PR with new port, or port change/update
+.It Ar test
+automate testing a new port or a port update
+.El
+.Sh COMMANDS
+.Bl -tag -width ".Ar submit"
+.It Ar create
+Creates directory for new port from template using
+.Xr newfile 1
+program.
+(Please refer to
+.Xr newfile 1
+manual page for details on using it and customizing its templates).
+.Pp
+Synopsis:
+.Pp
+.Nm
+.Ar create name
+.Pp
+.Bl -tag -width ".Fl s Ar severity"
+.It Ar name
+name of port to create. 
+Generates an error if a file or directory with this name already exists
+in the current directory.
+.El
+.Pp
+Example:
+.Pp
+.Dl % port create libgpg-error
+.Pp
+This would create a new directory named
+.Pa libgpg-error
+and corresponding
+.Pa Makefile ,
+.Pa distinfo ,
+.Pa pkg-descr ,
+.Pa pkg-plist
+files.
+.It Ar diff
+Generates
+.Xr shar 1 
+file (for new ports)
+or patch file in unified 
+.Xr diff 1 
+format against original port (for changes or updates),
+suitable for submitting as PR.
+.Pp
+Generated file then passed to the viewer specified in 
+.Pa ~/.porttools 
+configuration file.
+Default viewer is 
+.Xr cdiff 1 
+if present,
+otherwise - 
+.Xr more 1 .
+.Pp
+Synopsis:
+.Pp
+.Nm
+.Ar diff
+.Op Fl h
+.Op Fl d Ar mode
+.Pp
+.Bl -tag -width ".Fl s Ar severity"
+.It Fl h
+display usage summary for this command.
+.It Fl d Ar mode
+select diff generation mode:
+.Bl -tag -width ".Pa suffix"
+.It SVN
+diff against SVN repository (default).
+.It Pa dir
+diff against original version of the port in the Ports tree with root at
+.Pa dir
+(for example,
+.Pa /usr/ports ) .
+.It Pa suffix
+diff against original version of the port with specified directory
+.Pa suffix
+(for example,
+.Pa .orig )
+in the parent directory.
+.El
+.El
+.Pp
+Example:
+.Pp
+.Dl % port diff -d SVN
+.Pp
+This would generate unified diff of modified checked-out working copy 
+of the port against SVN repo.
+.It Ar fetch
+Fetch one or more distfiles of new or updated port version 
+and updates checksums.
+It is a shortcut for typing the following at the shell prompt:
+.Pp
+.Dl % rm -f distinfo && make fetch && make makesum
+.Pp
+Synopsis:
+.Pp
+.Nm
+.Ar fetch
+.Pp
+Accepts no additional arguments.
+.Pp
+.It Ar help
+Displays summary for 
+.Nm
+commands by dynamically scanning command scripts located in
+.Pa ${PREFIX}/share/porttools .
+.Pp
+Synopsis:
+.Pp
+.Nm
+.Ar help
+.Pp
+Accepts no additional arguments.
+.Pp
+.It Ar submit
+Submits PR with new port, or changed or updated port.
+.Pp
+Run this command from a directory containing the new port.
+First, it executes 
+.Xr portlint 1
+(unless
+.Fl L
+option was specified) 
+to verify the port files for correctness,
+then it automatically detects mode - new, change or update 
+(unless overridden by
+.Fl m Ar mode
+option),
+generates either a
+.Xr shar 1 
+file (for new ports)
+or patch file in unified
+.Xr diff 1
+format (for changed or updated ports).
+This file is named according to port's name and version.
+.Pp
+Finally, it prepares PR for submittal via
+.Xr send-pr 1
+by automatically filling in most of the fields in the standard form, 
+attaching the generated shar or patch file to the PR.
+If the PR submittal was successful, 
+shar/patch file could be optionally saved to ${ARCHIVE_DIR} 
+if that variable is defined and points to a writable directory.
+.Pp
+Synopsis:
+.Pp
+.Nm
+.Ar submit
+.Op Fl hL
+.Op Fl m Ar mode
+.Op Fl d Ar mode
+.Op Fl s Ar severity
+.Op Fl p Ar priority
+.Pp
+.Bl -tag -width ".Fl s Ar severity"
+.It Fl h
+display usage summary for this command.
+.It Fl d Ar mode
+select diff generation mode - see the port diff command above for details.
+.It Fl m Ar mode
+Overrides automatic detection of operation mode:
+.Bl -tag -width update
+.It Ar new
+submitting new port.
+.It Ar change
+changing (but not updating) existing port.
+.It Ar update
+updating existing port to newer version.
+.El
+.It Fl s Ar severity
+Sets severity of the PR.
+Valid values are:
+.Em non-critical ,
+.Em serious ,
+.Em critical .
+Default is 
+.Em non-critical .
+.It Fl p Ar priority
+Sets priority of the PR.
+Valid values are:
+.Em low ,
+.Em medium ,
+.Em high .
+Default is 
+.Em low .
+.It Fl L
+Skips running
+.Xr portlint 1 .
+Using this option will generate a warning and it strongly discouraged.
+.It Fl P
+Don't send the PR.
+Just print to stdout (see -P in
+.Xr send-pr 1) .
+.El
+.It Ar test
+Automates the process of testing a new port (or a port update) 
+by going through the steps recommended by the FreeBSD Porter's Handbook:
+.Bl -dash -compact
+.It 
+build 
+.It 
+install
+.It 
+package
+.It 
+deinstall
+.El
+.Pp
+Note: build phase can be run under a regular user account,
+all others require root privileges, so 
+.Nm
+automatically invokes
+.Em Xr sudo 1 .
+.Pp
+The command stops if any errors are encountered during the process.
+.Pp
+To avoid interfering with the ports already installed on the build host, 
+.Ev PREFIX 
+variable is set so the installation is done to a directory inside
+.Ev BUILDROOT 
+.Pq e.g. Pa /tmp/${PKGNAME} , 
+and 
+.Ev PKG_DBDIR
+points to a temporary package database 
+.Pq e.g. Pa /tmp/pkg_db.xxxxxxx .
+This allows to test an update to a port already
+installed on the build system (same or previous version).
+.Pp
+This command also detects and lists any files not listed in 
+.Pa pkg-plist 
+during
+.Sq Extra files check
+phase.
+.Pp
+Synopsis:
+.Pp
+.Nm
+.Ar test
+.Op Fl h
+.Op Fl lLbipcC
+.Op Fl - Ar "port knobs"
+.Pp
+.Bl -tag -width ".Fl s Ar severity"
+.It Fl h
+display usage summary for this command.
+.It Fl l
+Run
+.Em Xr portlint 1 
+only.
+.It Fl L
+Do not run
+.Em Xr portlint 1 .
+.It Fl b
+Stop after build phase.
+.It Fl i
+Stop after install phase.
+.It Fl p
+Stop after package phase.
+.It Fl c
+Do NOT clean before
+.Nm .
+.It Fl C
+Do NOT clean after
+.Nm .
+.It Fl -
+End of
+.Nm
+options.
+Port knobs may follow.
+.El
+.Pp
+Examples:
+.Pp
+.Dl % port test -i -C
+.Pp
+This would build and install the port, but would not delete the installed files.
+This command may be used to manually examine the installed files for correctness.
+.Pp
+.Dl % testport -- NOPORTDOCS=yes
+.Pp
+Tests port without installing documentation 
+(i.e. pass NOPORTDOCS=yes to all make phases).
+Note: you can list as many port knobs/parameters as needed.
+.Pp
+.El
+.Sh FILES
+.Bl -tag -width ".Pa ~/.porttools" -compact
+.It Pa ~/.porttools
+FreeBSD Port Tools configuration file.
+It is generated automatically if missing.
+See
+.Xr porttools 5
+for detailed description of the format.
+.El
+.Sh SEE ALSO
+.Xr svn 1 ,
+.Xr cdiff 1 ,
+.Xr diff 1 ,
+.Xr more 1 ,
+.Xr newfile 1 ,
+.Xr portlint 1 ,
+.Xr send-pr 1 ,
+.Xr shar 1 ,
+.Xr sudo 1 ,
+.Xr porttools 5 ,
+.Xr ports 7
+.Sh BUGS
+Please report any bugs to
+.An Sergei Kolobov Aq sergei@FreeBSD.org .

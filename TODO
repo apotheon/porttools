@@ -1,0 +1,32 @@
+- add web page
+  (added Wed Jun 18 23:24:05 2003, incomplete, priority high)
+
+- Allow non-root installation (INSTALL_AS_USER in bsd.port.mk); use this by default?
+  (added Wed Sep 10 13:30:14 2003, incomplete, priority high)
+
+- use SU_CMD bsd.port.mk feature -> remove dependency on sudo
+  (added Wed Oct  1 00:51:51 2003, incomplete, priority high)
+
+- remove PKG_DB dir on make failures and Ctrl-C
+  (added Mon Oct  6 09:29:10 2003, incomplete, priority high)
+
+- add logging (-l) to testport: /var/log/porttools/${PORTNAME}.${PHASE}
+  (added Mon Oct  6 09:29:53 2003, incomplete, priority high)
+
+- add USAGE (or a section to README) to describe usage scenarios, describe my config
+  (added Mon Oct  6 09:34:29 2003, incomplete, priority high)
+
+- Allow user to customize bullet symbols (default: "-") used in PR's Description field
+  (added Wed Sep 10 12:22:43 2003, incomplete, priority medium)
+
+- Extend -d <dir> diff mode by autodetecting two common scenarios: 1. <dir> is root of ports tree (detect by checking for
+  <dir>/Mk/bsd.port.mk, for example); 2. <dir> is directory containing the original version of this port (e.g. <dir> =
+  ../sample_port.orig or /usr/ports/mail/bincimap)
+  (added Wed Sep 10 12:30:08 2003, incomplete, priority medium)
+
+- add zsh completion functions to complete tools' arguments
+  (added Wed Jun 18 23:23:43 2003, incomplete, priority low)
+
+- Detect added or removed files
+  (added Mon Jun 23 02:06:00 2003, incomplete, priority low)
+

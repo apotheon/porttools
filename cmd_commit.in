@@ -1,0 +1,124 @@
+# cmd_commit
+# Module for port(1)
+# SUMMARY: commit a port into the FreeBSD Ports SVN Repository
+#
+# $Id: cmd_commit.in,v 1.2 2009/09/09 19:58:30 skolobov Exp $
+#
+
+# Check if this script is run via port(1)
+if [ "${PORTTOOLS}" = "" ]
+then
+	echo "This script should be run via port(1) front-end"
+	exit 1
+fi
+
+# Usage
+usage ()
+{
+cat << EOF
+FreeBSD Port Tools __VERSION__
+Usage:	port commit [-h] 
+	-h	- Display this usage summary
+EOF
+}
+
+
+# Parse command line arguments
+ARGS=`/usr/bin/getopt h $*`
+if [ $? != 0 ]
+then
+	echo "Error: invalid arguments"
+	usage
+	exit 2
+fi
+
+set -- $ARGS
+while [ x"$1" != x"--" -a x"$1" != x"" ]
+do
+	i=$1
+	case "$i" in
+	# help
+	-h)
+		usage
+		exit 0
+		;;
+	esac
+	shift
+done
+
+echo ${EMAIL} | grep -qsi "@FreeBSD.org"
+if [ $? != 0 ]
+then
+	echo "===> ERROR: Please set EMAIL to your FreeBSD address in ~/.porttools"
+	exit 1
+fi
+
+# Determine committer's username on freefall
+FREEFALL_USERNAME="${EMAIL%%@FreeBSD.org}"
+echo "===> Your username on freefall: ${FREEFALL_USERNAME}"
+
+# Determine if this is a new port
+MODE="update"
+svn status Makefile 2>&1 1>/dev/null | grep -qs 'svn: warning: W155007:'
+if [ $? -eq 0 ]
+then
+	MODE="new"
+fi
+
+# Run portlint(1) to validate port's sanity
+echo "===> Pre-commit portlint check"
+FLAGS="-C"
+[ "${MODE}" = "new" ] && FLAGS="${FLAGS} -N"
+PL_SVN_IGNORE='^\d+$|^pr-patch$|^svn-msg$' \
+portlint ${FLAGS}
+if [ $? -ne 0 ]
+then
+	echo "Error validating port"
+	exit 1
+fi
+
+
+# See if SVN message already exists, and use that for commit log
+MSG="svn-msg"
+FLAGS=""
+
+if [ "${MODE}" = "new" ]
+then
+	PORTSDIR="`make -V PORTSDIR`"
+
+	if [ -e ${MSG} ]
+	then
+		FLAGS="-c ${MSG}"
+	fi
+
+	${PORTSDIR}/Tools/scripts/addport -d `pwd` -u ${FREEFALL_USERNAME} ${FLAGS}
+else
+	# Make sure we are working with up-to-date version
+	echo "===> Pre-commit SVN update"
+	svn update
+
+	if [ -e ${MSG} ]
+	then
+		FLAGS="-F ${MSG}"
+
+		ANSWER="n"
+		while true
+		do	
+			echo '============================================='
+			cat ${MSG}
+			echo '============================================='
+			read -p "Is the SVN message above correct? (y/n)" ANSWER
+			[ "${ANSWER}" = "y" ] && break
+			${VISUAL:-vi} ${MSG}
+		done
+	fi 
+	# Commit the port update
+	echo "===> Committing port update"
+	svn commit ${FLAGS}
+	
+fi
+# Remove SVN message file only if commit was successful
+[ $? -eq 0 -a -e ${MSG} ] && rm ${MSG}
+
+echo "===> Done"
+exit 0

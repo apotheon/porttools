@@ -1,0 +1,171 @@
+0.99.20140202:
+- Include patches from svn://svn.freebsd.org/ports/head/ports-mgmt/porttools/files/*
+  in original files, open github repository. 
+
+0.99, 2009-09-09
+- bugfix: Fix commandline arguments handling for some cases when two or more 
+  flags are used - e.g. `port submit -m update -d .orig` (PR: ports/100771,
+  thanks HASHI Hiroaki and Dmitry Marakasov)
+- optimization: add -R flag to cvs(1) invocation in port diff - this would
+  allow working against a local read-only repository and improve performance
+  (PR: ports/116248, thanks Xin LI)
+- update copyright notices
+
+0.77, 2006-05-06
+- bugfix: port create: quote arguments passed to newfile(1) - otherwise
+  a space in FULLNAME will mess up other arguments (thanks Radim Kolar)
+
+0.76, 2006-05-02
+- bugfix: port submit: integrate patch from the ports tree: modify util_diff
+  to work correctly for p5-/py-/ruby- ports (i.e. PKGNAMEPREFIX is not empty).
+  This fixes both detection of ORIG_DIR and Synopsis field generation for such
+  ports (PR: ports/70156, Cheng-Lung Sung)
+- bugfix: port create: use author's name and e-mail address from ~/.porttools
+  when creating a new port (PR: ports/70300, Janos Mohacsi)
+- bugfix: port test: integrate patch from the ports tree: add detection
+  of leftover directories in addition to leftover files (PR: ports/71363,
+  Yen-Ming Lee)
+- bugfix: port submit: avoid CC'ing PRs with maintainership changes to
+  previous maintainer if the port was unmaintained - i.e. when MAINTAINER
+  is set to ports@FreeBSD.org (PR: ports/94055, Diane Bruce)
+
+0.75, 2006-05-01
+- new: port commit: commit the port to FreeBSD CVS repository
+- new: port getpr: extract contents of a PR from FreeBSD GNATS database
+- new: port install: install the port
+- new: port upgrade: upgrade the port
+
+0.63, 2004-08-07
+- new: port test: add NO_DEPENDS=yes to the port test flags to prevent
+  installation of dependencies into the temporary PREFIX dir
+- change: port test: optimize shared library dependency search algorithm
+  by only searching for files listed in the package's plist
+- new: port test: if 'make package' phase fails (most often because of
+  stale files listed in pkg-plist which are no longer installed) display
+  a list currently installed in the PREFIX before cleaning up
+- cosmetique: change man pages to my FreeBSD.org e-mail address
+- cosmetique: change copyright in README for year 2004
+- cosmetique: modify output of help command, fix wrapping
+- cosmetique: port submit: shorten SUMMARY line to fit in 80 columns
+
+0.62, 2004-07-29
+- bugfix: port test: fix logic to generate an unique PREFIX
+- bugfix: port test: DTRT when LOCALBASE == X11BASE
+- change: port test: take additional precautions to prevent deleting
+  PREFIX if PREFIX == LOCALBASE
+
+0.61, 2004-07-29
+- bugfix: port test: fix a typo - unclosed double quote
+- change: LICENSE: update copyright for year 2004
+
+0.60, 2004-07-29
+- add: port submit: new option: -c (committer check): adds "-c" to portlint(1)
+  flags when checking the port for sanity before submitting 
+  (previously "-c" was always added - could cause problems with recent
+  portlint versions)
+- change: port test: change portlint(1) flags from "-abct" to "-abt"
+- change: port test: avoid using commas and plus signs when generating PREFIX
+  (some ports breaks with such PREFIX)
+- change: port test: avoid deleting PREFIX before and after port test
+  if installing into LOCALBASE or X11BASE (ouch!)
+- add: port test: before deinstall, use pkg_info(1) to output line
+  with PKGNAME and COMMENT to check against provided in Makefile
+  (mostly for COMMENT truncation cases)
+  NOTE: this should really be checked by portlint(1)
+- add: port test: before deinstall, run ldd(1) on each installed binary
+  to depend any hidden (or improper) shared library dependencies
+- change: port test: remove PREFIX from the list of extra files
+  (for easier copy-and-pasting into pkg-plist)
+- bugfix: util_diff: use PKGNAMEPREFIX and PKGNAMESUFFIX to determine the
+  original port dir if diff'ing in non-CVS mode (reported by many)
+- change: util_diff: add "-N" to "cvs diff" options to include newly created
+  files in the diff (suggested by Tim Bishop - thanks!)
+- change: port submit: extend functionality of added/deleted files
+  detection to work in non-CVS mode, too - patch provided by Sergey
+  Matveychuk (thanks!); closes #995048
+- bugfix: port submit: fix update and change maintainer detection 
+  by properly escape awk regexp (thanks, Sergey!)
+
+0.50, 2003-10-20
+- new: change command-line interface: now all scripts are run via 
+  port(1) front-end
+- new: "plug-in" command scripts, located in ${PREFIX}/share/porttools
+- new: commands: 
+	- create - creates new port directory from a template
+	- diff - generate a diff (in the same way as "port submit" would)
+	- fetch - fetch a new version of the port
+- change: pr-change, pr-new and pr-update are combined into "port submit",
+  which determines the mode automatically
+- change: port submit: improve detection of requests to take maintainership
+  (prompted by Sergey Matveychuk)
+- new: port submit: add detection for added/removed files
+  (tested only with CVS diff mode)
+- new: port submit: add option (-L) to skip running portlint (thanks, Sergey!)
+- change: testport: renamed to port test
+- change: port test: filter out share/nls/{POSIX,en_US.US-ASCII} from extra 
+  files check (should really be fixed in the mtree)
+- change: pr-new.1, pr-change.1, pr-update.1, and testport.1 were merged into
+  single manual page - port.1
+- new: porttools.1: new manual page describing ~/.porttools config file format
+
+0.26, 2003-08-25
+- bugfix: pr-update: prevent warning when ARCHIVE_DIR is unset
+  by proper quoting (thanks, Sergey, Lars and Remi!)
+- bugfix: pr-update: fix a typo: s/ORIG_PORT/ORIG_DIR/ (thanks, Lars!)
+- bugfix: testport: properly handle multiple arguments (thanks, Lars!)
+- change: THANKS: added a new contributor (Remi)
+
+0.25, 2003-08-01
+- new: pr-update and friends now allow non-CVS diff generation: 
+       -d <diffmode> flag (thanks, Jens and Sergey!)
+- bugfix: fixed incorrect config file name in manpages (thanks, Lars!)
+- change: testport and pr-update now print more detailed usage 
+          if -h option is given
+- change: added new contributors to THANKS
+
+0.20, 2003-07-27
+- change: the only supported method of installation is through devel/porttools
+  port from now on; Makefile is no longer included with the distribution
+- new: added manpages
+- change: testport was converted to use getopt(1)
+- new: pr-update now accepts command-line arguments using getopt(1):
+  -m mode, -s severity, -p priority
+- new: testport now has two new options:
+  -l - stop after running portlint(1)
+  -L - do NOT run portlint(1)
+- new: scripts now contain (and sometime display) the tools version number
+- bugfix: testport: do not check for extra files if $PREFIX does not exist
+
+0.16, 2003-07-21
+- bugfix: do not remove PKG_DBDIR in "clean before build phase:
+          it cause failure when in install phase with new code
+	  in bsd.port.mk
+- cosmetique: change prefix in testport's output
+
+0.15, 2003-07-14
+- respect PKGNAMEPREFIX and PKGNAMESUFFIX in pr-* scripts (thanks, Tim!)
+- minor fixes/cleanups
+- added THANKS file to list contributors
+
+0.11, 2003-07-08
+- detect situations where maintainership change is requested, adjust
+  PR form respectively
+- fix bug which prevented submitted patch to be saved in ${ARCHIVE_DIR}
+
+0.10, 2003-06-25
+- add configuration file (~/.porttools), generated automatically if it does not exist
+- pr-update, pr-change, pr-new are symlinks to a single script, mode detected based on $0
+- do not use send-pr.template anymore - instead, PR form is generated from by the script
+- cleanup after aborted send-pr(1) - delete generated files and /tmp/pbad.*
+- testport uses configuration file, too
+- testport: BUILDROOT can override where PREFIX is located (default: in /tmp)
+- testport: allow running several testport processes - use PREFIX=${BUILDROOT}/${PKGNAME}
+  (instead of /tmp/${PORTNAME}) and mktemp(1)-ed PKG_DBDIR
+
+0.01, 2003-06-18
+- first public release
+
+0.00, 2002-11-??
+- initial implementation
+
+$Id: NEWS,v 1.23 2009/09/09 19:58:30 skolobov Exp $

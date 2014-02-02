@@ -1,0 +1,93 @@
+# cmd_upgrade
+# Module for port(1)
+# SUMMARY: upgrade a port
+#
+# $Id: cmd_upgrade.in,v 1.2 2009/09/09 19:58:30 skolobov Exp $
+#
+
+# Check if this script is run via port(1)
+if [ "${PORTTOOLS}" = "" ]
+then
+	echo "This script should be run via port(1) front-end"
+	exit 1
+fi
+
+# Usage
+usage ()
+{
+cat << EOF
+FreeBSD Port Tools __VERSION__
+Usage:	port upgrade [-h] [port flags ...]
+	-h	- Display this usage summary
+	-p	- Create package
+EOF
+}
+
+# Initialize defaults
+PACKAGE="no"
+
+# Parse command line arguments
+ARGS=`/usr/bin/getopt hp $*`
+if [ $? != 0 ]
+then
+	echo "Error: invalid arguments"
+	usage
+	exit 2
+fi
+
+set -- $ARGS
+while [ x"$1" != x"--" -a x"$1" != x"" ]
+do
+	i=$1
+	case "$i" in
+	# help
+	-h)
+		usage
+		exit 0
+		;;
+	# package
+	-p)
+		PACKAGE="yes"
+		;;
+	# end of options
+	--)
+		shift
+		break
+		;;
+	esac
+	shift
+done
+
+# Save port flags passed via command line
+PORT_FLAGS="$*"
+echo "===> flags: ${PORT_FLAGS}"
+
+# See if sudo(1) if needed
+SUDO=""
+[ `/usr/bin/id -u` = 0 ] || SUDO="sudo"
+
+# Clean work directory first
+make clean ${PORT_FLAGS} || exit 1
+
+# Make sure we have correct distfiles
+make checksum ${PORT_FLAGS} || exit 1
+
+# Build port
+make ${PORT_FLAGS} || exit 1
+
+# Deinstall previous version of port
+${SUDO} make deinstall ${PORT_FLAGS} || exit 1
+
+# Install current version of port
+${SUDO} make install ${PORT_FLAGS} || exit 1
+
+# Package port if requested
+if [ "${PACKAGE}" = "yes" ]
+then
+	${SUDO} make package FORCE_PACKAGE=yes ${PORT_FLAGS} || exit 1
+fi
+
+# Clean work directory 
+make clean ${PORT_FLAGS} || exit 1
+
+exit 0

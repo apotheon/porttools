@@ -1,0 +1,209 @@
+# cmd_test
+# Module for port(1)
+# SUMMARY: test port (build, install, package, deinstall)
+#
+# $Id: cmd_test.in,v 1.8 2009/09/09 19:58:30 skolobov Exp $
+#
+
+# Check if this script is run via port(1)
+if [ "${PORTTOOLS}" = "" ]
+then
+	echo "This script should be run via port(1) front-end"
+	exit 1
+fi
+
+# Usage
+usage ()
+{
+cat << EOF
+FreeBSD Port Tools __VERSION__
+Usage: port test [-h ] [-lLbipdcC] [-- <port knobs>]
+	-h	Display this usage summary
+	-l	Run portlint(1) only
+	-L	Do NOT run portlint(1)
+	-b	Stop after 'make build' phase
+	-i	Stop after 'make install' phase
+	-p	Stop after 'make package' phase
+	-c	Do NOT clean before
+	-C	Do NOT clean after
+EOF
+}
+
+# Defaults
+RUN_PORTLINT="yes"
+CLEAN_BEFORE="yes"
+CLEAN_AFTER="yes"
+
+# Parse command line arguments
+ARGS=`/usr/bin/getopt hlLbipcC $*`
+if [ $? != 0 ]
+then
+	echo "Error: invalid arguments"
+	usage
+	exit 2
+fi
+
+set -- $ARGS
+while [ x"$1" != x"--" -a x"$1" != x"" ]
+do
+	i=$1
+	case "$i" in
+	-h)	# help
+		usage
+		exit 0
+		;;
+	-l)	# run portlint(1) only
+		STOP="lint"
+		;;
+	-L)	# do NOT run portlint(1)
+		RUN_PORTLINT="no"
+		;;
+	-b)	# stop after build phase
+		STOP="build"
+		;;
+	-i)	# stop after install phase
+		STOP="install"
+		;;
+	-p) 	# stop after package phase
+		STOP="package"
+		;;
+	-c)	# Do NOT clean before 
+		CLEAN_BEFORE="no"
+		;;
+	-C)	# Do NOT clean after 
+		CLEAN_AFTER="no"
+		;;
+	--)	# End of option list
+		shift
+		break;
+		;;
+	esac
+	shift
+done
+
+# Run portlint(1) to validate port's sanity
+if [ "${RUN_PORTLINT}" = "yes" ]
+then
+	echo "===> Validating port with portlint"
+	PORTLINT_FLAGS="-abt"
+	portlint ${PORTLINT_FLAGS}
+	if [ $? -ne 0 ]
+	then
+		echo "Error validating port"
+		exit 1
+	fi
+	[ "${STOP}" = "lint" ] && exit 0
+else
+	echo "===> WARNING: skipping running portlint(1)"
+fi
+
+# Collect information about the port
+PKGNAME="`make -V PKGNAME`"
+
+# Create a temporary dir for temporary package database
+PKG_DBDIR="`mktemp -d -t pkg_db`" || exit 1
+
+# Do not attempt to clean up in PREFIX if USE_X_PREFIX=yes
+LOCALBASE="`make -V LOCALBASE`"
+USE_X_PREFIX="`make -V USE_X_PREFIX`"
+PREFIX="`make -V PREFIX`"
+if [ "${USE_X_PREFIX}" != "yes" ]
+then
+	# Some ports fail to build if PREFIX contains commas 
+	# (mostly due to constructs like "sed -e 's,foo,bar'")
+	# or plus signs - replace them with underscore
+	PREFIX="${BUILDROOT:-/tmp}/`echo ${PKGNAME} | tr  '[,+]' _`"
+fi
+
+# Display FLAGS
+PORT_FLAGS="PREFIX=${PREFIX} NO_DEPENDS=yes PKG_DBDIR=${PKG_DBDIR} $*"
+echo "===> flags: ${PORT_FLAGS}"
+
+# Start with a clean workspace
+if [ "${CLEAN_BEFORE}" = "yes" ]
+then
+	echo "===> Cleaning workspace before port test"
+	make clean
+	if [ "${USE_X_PREFIX}" != "yes" -a -d ${PREFIX} ] 
+	then
+		echo "===>  Removing existing ${PREFIX} dir"
+ 		[ "${PREFIX}" != "${LOCALBASE}" ] && sudo rm -rf ${PREFIX}
+	fi
+fi
+
+# Go through the build phases
+for PHASE in build install package deinstall
+do
+	SUDO="sudo"
+	[ "${PHASE}" = "build" ] && SUDO=""
+
+	if [ "${PHASE}" = "deinstall" ]
+	then
+		# Before deinstalling, check pkg_info output
+		echo "===> Checking pkg_info"
+		PKG_DBDIR=${PKG_DBDIR} pkg_info | grep ${PKGNAME}
+
+		# XXX Dirty hack to avoid checking the whole
+		# LOCALBASE or X11BASE trees
+		PLIST="${PKG_DBDIR}/${PKGNAME}/+CONTENTS"
+		if [ "${USE_X_PREFIX}" != "yes" -a -r ${PLIST} ]
+		then
+			# Also check ldd(1) output on binaries
+			echo "===> Checking shared library dependencies"
+			grep -v "^@" ${PLIST} | \
+				sed -e "s,^,${PREFIX}/," | \
+				xargs ldd 2>&1 | \
+				grep -v "not a dynamic executable" | \
+				grep '=>' | awk '{print $3;}' | sort -u
+		fi
+	fi
+
+	${SUDO} make ${PORT_FLAGS} ${PHASE}
+	if [ $? -gt 0 ]; then
+		echo "===> Error running make ${PHASE}"
+		if [ "${PHASE}" = "package" -a "${USE_X_PREFIX}" != "yes" ]
+		then
+			echo "===> Files currently installed in PREFIX"
+			test -d ${PREFIX} && find ${PREFIX} ! -type d | \
+				egrep -v "${PREFIX}/share/nls/(POSIX|en_US.US-ASCII)"  | \
+				sed -e "s,^${PREFIX}/,,"
+		fi
+		echo "===> Cleaning up"
+		[ "${USE_X_PREFIX}" != "yes" -a \
+		  "${PREFIX}" != "${LOCALBASE}" ] && sudo rm -rf ${PREFIX}
+		sudo rm -rf ${PKG_DBDIR}
+		exit 1
+	fi
+
+	[ "${PHASE}" = "${STOP}" ] && break
+done
+
+# Check for extra files left
+echo "===> Extra files and directories check"
+if [ -d ${PREFIX} -a "${USE_X_PREFIX}" != "yes" ]
+then
+	# Remove PREFIX from the extra files list
+	# XXX Dirty hack to hide these 2 files that always show up
+	find ${PREFIX} ! -type d | \
+		egrep -v "${PREFIX}/share/nls/(POSIX|en_US.US-ASCII)"  | \
+		sed -e "s,^${PREFIX}/,,"
+	sudo find ${LOCALBASE}/ -type d | sed "s,^${LOCALBASE}/,," | sort > ${PREFIX}.PLIST_DIRS.before
+	sudo find ${PREFIX}/ -type d | sed "s,^${PREFIX}/,," | sort > ${PREFIX}.PLIST_DIRS.after
+	comm -13 ${PREFIX}.PLIST_DIRS.before ${PREFIX}.PLIST_DIRS.after | sort -r | awk '{print "@dirrmtry "$0}'
+fi
+
+# Finish with a clean workspace
+if [ "${CLEAN_AFTER}" = "yes" ]
+then
+	echo "===> Cleaning up after port test"
+	make clean
+	if [ "${USE_X_PREFIX}" != "yes" -a -d ${PREFIX} ] 
+	then
+		echo "===>  Removing existing ${PREFIX} dir"
+ 		[ "${PREFIX}" != "${LOCALBASE}" ] && sudo rm -rf ${PREFIX} ${PREFIX}.PLIST_DIRS.before ${PREFIX}.PLIST_DIRS.after
+	fi
+	sudo rm -rf ${PKG_DBDIR}
+fi
+
+echo "===> Done."
+exit 0

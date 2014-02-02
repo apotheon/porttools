@@ -1,6 +1,6 @@
 FreeBSD Port Tools
-==================
 
+Copyright (c) 2003-2009 Sergei Kolobov. All rights reserved.
 
 INTRODUCTION
 ============
@@ -18,9 +18,25 @@ port(1) front-end:
 - port test: automate testing a new port or a port update
 - port upgrade: upgrade a port
 
-FreeBSD Port Tools were originally available at http://sourceforge.net/projects/porttools/ 
-but went unmaintained for too long, so I decided to fork the project and put it
-on Github.
+FreeBSD Port Tools are available at http://sourceforge.net/projects/porttools/.
+
+I would appreciate any feedback, comments or suggestions for improvement. 
+Patches are welcome.  Contact me at <sergei@FreeBSD.org>.
+
+BACKGROUND
+==========
+
+I have submitted quite a few port PRs myself, and soon got tired of editing
+the default send-pr form to fill in the fields. So I first created my own
+custom form which simplified the process a little bit, but still not much.
+
+I also wanted to have consistency in the format of Synopsis and other fields
+across all of my PRs.  So I came up with these home-grown tools. I use them for
+several months now (approximately since November 2002) and find them quite
+useful (at least, for me).  Hopefully, they could be useful for somebody else.
+
+See list of PRs submitted by me as an example what it looks like:
+http://www.freebsd.org/cgi/query-pr-summary.cgi?originator=kolobov&closedtoo=on
 
 USAGE
 =====
@@ -35,30 +51,30 @@ Let me give a quick overview:
    i.e. either maitain or send changes/updates to. Thus, it does not have
    to contain the whole FreeBSD Ports tree)
 
-   xmj@elf:~% cd ~/ports
-   xmj@elf:~/ports% svn co ipsvd
+   sgk@elf:~% cd ~/ports
+   sgk@elf:~/ports% svn co ipsvd
 
    ipsvd is the sample port name.
 
 2. Now, make your changes - e.g. change PORTVERSION from 0.6.0 to 0.6.1.
 
-   xmj@elf:~/ports/ipsvd% cd ipsvd
-   xmj@elf:~/ports/ipsvd% vim Makefile
+   sgk@elf:~/ports/ipsvd% cd ipsvd
+   sgk@elf:~/ports/ipsvd% vim Makefile
 
 3. At this moment we need to fetch the new distfile and run "make makesum" 
    to update the distinfo file. There is even simpler way to accomplish this 
    with the Port Tools version 0.50 or later:
 
-   xmj@elf:~/ports/ipsvd% port fetch
+   sgk@elf:~/ports/ipsvd% port fetch
 
 4. Now we want to make sure that the port compiles, installs and works fine:
 
-   xmj@elf:~/ports/ipsvd% port test
+   sgk@elf:~/ports/ipsvd% port test
 
 5. Once I am satisfied with the results, let us submit a PR 
    with the port update:
 
-   xmj@mx12:~/ports/ipsvd% port submit
+   sgk@elf:~/ports/ipsvd% port submit
    
 Now, this was a very simple case, and it did not show off all the features 
 of the Port Tools, so please check port(1) manual page for details.
@@ -78,3 +94,5 @@ DISCLAIMER
 This program is free software; you can redistribute it 
 and/or modify it under the terms of the BSD License 
 which is distributed with the software in the file LICENSE.
+
+$Id: README,v 1.9 2009/09/09 19:58:30 skolobov Exp $

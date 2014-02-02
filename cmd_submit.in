@@ -1,0 +1,394 @@
+# cmd_submit
+# Module for port(1)
+# SUMMARY: submit Problem Report with new port, or port change/update
+#
+# $Id: cmd_submit.in,v 1.7 2009/09/09 19:58:30 skolobov Exp $
+#
+
+# Check if this script is run via port(1)
+if [ "${PORTTOOLS}" = "" ]
+then
+	echo "This script should be run via port(1) front-end"
+	exit 1
+fi
+
+# Usage
+usage ()
+{
+cat << EOF
+FreeBSD Port Tools __VERSION__
+Usage:	port submit [-h] [-m <mode>] [-d <diff mode>]
+		[-s <severity>] [-p <priority>] [-L]
+	-h	- Display this usage summary
+	-m <mode> - Override automatic mode selection:
+		new - submitting new port
+		change - changing a port 
+		update - updating a port to newer version
+	-d <diff mode> - Select diff generation mode:
+		SVN - against SVN
+		<dir> - against Ports tree in <dir>
+		<pattern> - against original port in <pwd><pattern>
+	-s <severity> - Set PR's severity to <severity>
+	-p <priority> - Set PR's priority to <priority>
+	-P	- Don't send the PR; print to stdout (see -P in send-pr(1))
+	-c	- committer mode: more portlint(1) checks
+	-L	- Skip running portlint(1)
+EOF
+}
+
+
+# Initialize arguments to the default values
+SEVERITY="non-critical"
+PRIORITY="low"
+COMMITTER="no"
+RUN_PORTLINT="yes"
+SENDPR_ARGS=
+
+# Parse command line arguments
+ARGS=`/usr/bin/getopt hm:d:s:p:cLP $*`
+if [ $? != 0 ]
+then
+	echo "Error: invalid arguments"
+	usage
+	exit 2
+fi
+
+set -- $ARGS
+while [ x"$1" != x"--" -a x"$1" != x"" ]
+do
+	i=$1
+	case "$i" in
+	# help
+	-h)
+		usage
+		exit 0
+		;;
+	# mode: new | change | update
+	-m)
+		MODE=$2
+		case "${MODE}" in
+		new|change|update)
+			shift
+			;;
+		*)
+			echo "Error: invalid mode: ${MODE}"
+			echo "Valid values: new, change, update"
+			exit 2
+			;;
+		esac
+		;;
+	# diff generation mode
+	-d)
+		DIFF_MODE=$2
+		shift
+		;;
+	# PR severity
+	-s)
+		SEVERITY=$2
+		case "${SEVERITY}" in
+		non-critical|serious|critical)
+			shift
+			;;
+		*)
+			echo "Error: invalid severity: ${SEVERITY}"
+			echo "Valid values: non-critical, serious, critical"
+			exit 2
+			;;
+		esac
+		;;
+	# PR priority
+	-p)
+		PRIORITY=$2
+		case "${PRIORITY}" in
+		low|medium|high)
+			shift
+			;;
+		*)
+			echo "Error: invalid priority: ${PRIORITY}"
+			echo "Valid values: low, medium, high"
+			exit 2
+			;;
+		esac
+		;;
+	# committer mode
+	-c)
+		COMMITTER="yes"
+		;;
+	# don't run portlint(1)
+	-L)
+		RUN_PORTLINT="no"
+		;;
+	# print to stdout instead of sending
+	-P)
+		SENDPR_ARGS="${SENDPR_ARGS} -P"
+		;;
+	esac
+	shift
+done
+
+# Determine if this is a new port
+if [ "${MODE}" = "" ]
+then
+	svn status Makefile 2>&1 1>/dev/null | grep -qs 'svn: warning: W155007:'
+	[ $? -eq 0 ] || [ "`grep '\$FreeBSD: ' Makefile`" ] || MODE="new"
+fi
+
+# util_diff will set
+# - PORTBASENAME if PORTNAME != port's directory name
+# - DIFF_TYPE to SVN, ports, or suffix
+PORTBASENAME=""
+DIFF_TYPE=""
+
+# Generate diff or shar, depending on the mode, and create TEMPROOT
+. ${SCRIPT_DIR}/util_diff
+
+# Run portlint(1) to validate port's sanity
+if [ "${RUN_PORTLINT}" = "yes" ]
+then
+	echo "===> Validating port with portlint"
+	FLAGS="-${PORTLINT_FLAGS:-abt}"
+	[ "${COMMITTER}" = "yes" ] && FLAGS="${FLAGS} -c"
+	[ "${MODE}" = "new" ] && FLAGS="${FLAGS} -N"
+	if portlint ${FLAGS} > ${TEMPROOT}/.portlint.out
+	then
+		cat ${TEMPROOT}/.portlint.out
+	else
+		cat ${TEMPROOT}/.portlint.out
+		echo "Error validating port"
+		rm -rf ${TEMPROOT}
+		exit 1
+	fi
+else
+	echo "===> WARNING: skipping portlint(1)"
+fi
+
+# Collect information about the port
+
+# The following section comes from util_diff. 
+# For port submit to work with python/ruby ports and GNATS auto-assign, version
+# numbers need to be sed'ed out before adding to synopsis.
+
+PYTHON_SUFFIX="`make -V PYTHON_SUFFIX`"
+RUBY_SUFFIX="`make -V RUBY_SUFFIX`"
+PKGNAMEPREFIX="`make -V PKGNAMEPREFIX | sed -E "s,py${PYTHON_SUFFIX}-,py-," | sed -E "s,ruby${RUBY_SUFFIX}-,ruby-,"`"
+PKGNAMESUFFIX="`make -V PKGNAMESUFFIX`"
+PORTNAME="${PKGNAMEPREFIX}`make -V PORTNAME`${PKGNAMESUFFIX}"
+
+# Rest as normal
+
+PORTVERSION="`make -V PORTVERSION`"
+PORTREVISION="`make -V PORTREVISION`"
+PORTEPOCH="`make -V PORTEPOCH`"
+VERSIONSTRING="${PORTVERSION}"
+[ "$PORTREVISION" != "0" ] && VERSIONSTRING="${VERSIONSTRING}_${PORTREVISION}"
+[ "$PORTEPOCH" != "0" ] && VERSIONSTRING="${VERSIONSTRING},${PORTEPOCH}"
+
+PKGNAME="`make -V PKGNAME`"
+CATEGORY="`make -V CATEGORIES | sed -E 's/^([^ ]+).*$/\1/'`"
+MAINTAINER="`make -V MAINTAINER`"
+COMMENT="`make -V COMMENT`"
+
+# Collect information about the local system
+RELEASE="`uname -srp`"
+SYSTEM="`uname -a | cut -d ' ' -f 1-12`"
+
+CC=""
+if [ "${MODE}" = "new" ]
+then
+	# Submitting a new port
+	NEW_PORT="yes"
+	CLASS="change-request"
+	PREFIX="NEW PORT"
+	SUFFIX="${COMMENT}"
+	DESCRIPTION=""
+else
+	if [ "${MODE}" = "" ]
+	then
+		# Automatically detect mode: change vs. update
+
+		MODE="change"
+		# Determine if it's update
+		VERSION_CHANGE="`grep '^[+-]PORTVERSION' ${PATCH} | wc -l`"
+		if [ ${VERSION_CHANGE} -eq 2 ]
+		then
+			OLD_VERSION="`awk '/^-PORTVERSION/ { print $2; }' ${PATCH}`"
+			NEW_VERSION="`awk '/^\+PORTVERSION/ { print $2; }' ${PATCH}`"
+			[ "${NEW_VERSION}" != "${OLD_VERSION}" ] && MODE="update"
+		fi
+	fi
+
+	# Set PR parameters based on selected mode
+	CLASS="change-request"
+	PREFIX="PATCH"
+	SUFFIX="[SUMMARIZE CHANGES]"
+	DESCRIPTION="[DESCRIBE CHANGES]"
+
+	if [ "${MODE}" = "update" ]
+	then
+		# Override some parameters if submitting an update to a newer
+		# version of an existing port
+		CLASS="update"
+        PREFIX="UPDATE"
+		SUFFIX="update to ${VERSIONSTRING}"
+		DESCRIPTION="- Update to ${VERSIONSTRING}"
+	fi
+
+	# Check to see if maintainership was requested
+	MAINT_CHANGE="`grep '^[+-]MAINTAINER' ${PATCH} | wc -l`"
+	if [ ${MAINT_CHANGE} -eq 2 ]
+	then
+		OLD_MAINTAINER="`awk '/^-MAINTAINER/ { print $2; }' ${PATCH}`"
+		NEW_MAINTAINER="`awk '/^\+MAINTAINER/ { print $2; }' ${PATCH}`"
+		if [ "${NEW_MAINTAINER}" != "${OLD_MAINTAINER}" ]
+		then
+			case ${NEW_MAINTAINER} in
+			# New maintainer is you
+			${EMAIL})
+				SUFFIX="${SUFFIX}, take maintainership"
+				DESCRIPTION="${DESCRIPTION}\n- Take maintainership"
+				;;
+			# Resetting maintainer to ports@FreeBSD.org"
+			ports@FreeBSD.org)
+				SUFFIX="${SUFFIX}, reset maintainership"
+				DESCRIPTION="${DESCRIPTION}\n- Reset maintainership to ports@FreeBSD.org"
+				;;
+			esac
+
+			# CC previous port maintainer,
+			# unless it was unmaintained 
+			if [ "${OLD_MAINTAINER}" != "ports@FreeBSD.org" ]; then
+				CC="${OLD_MAINTAINER}"
+			fi
+		fi
+	else
+		# Maintainer is NOT changed
+		case ${MAINTAINER} in
+		# You are the port maintainer
+		${EMAIL})
+			PREFIX="MAINTAINER"
+			CLASS="maintainer-update"
+			;;
+		# CC port maintainer (unless it is ports@FreeBSD.org)
+		*)
+			[ "${MAINTAINER}" != "ports@FreeBSD.org" ] && CC="${MAINTAINER}"
+			;;
+		esac
+	fi
+fi
+
+# Generate Synopsis line
+if [ -z "${PORTBASENAME}" ]
+then
+	SYNOPSIS="[${PREFIX}] ${CATEGORY}/${PORTNAME}: ${SUFFIX}"
+else
+	SYNOPSIS="[${PREFIX}] ${CATEGORY}/${PORTBASENAME}: ${SUFFIX}"
+fi
+
+echo "===> Generating PR form"
+PR_FORM="${TEMPROOT}/PR"
+cat > ${PR_FORM} <<- EOF
+	SEND-PR: -*- send-pr -*-
+	To: FreeBSD-gnats-submit@freebsd.org
+	From: ${FULLNAME} <${EMAIL}>
+	Cc: ${CC}
+	X-send-pr-version: 3.113
+	X-GNATS-Notify: 
+
+
+	>Submitter-Id:	current-users
+	>Originator:	${FULLNAME}
+	>Organization:	${ORGANIZATION}
+	>Confidential:	no 
+	>Synopsis:	${SYNOPSIS}
+	>Severity:	${SEVERITY}
+	SEND-PR: 	[ non-critical | serious | critical ] 
+	>Priority:	${PRIORITY}
+	SEND-PR: 	[ low | medium | high ]
+	>Category:	ports 
+	SEND-PR: <choose from the list of categories below (one line)>
+	SEND-PR: advocacy  alpha     amd64     arm       bin       conf
+	SEND-PR: docs      gnu       i386      ia64      java      kern
+	SEND-PR: misc      ports     powerpc   sparc64   standards sun4v
+	SEND-PR: threads   usb       www
+	>Class:		${CLASS}
+	SEND-PR: [ sw-bug | doc-bug | change-request | update | maintainer-update ]
+	>Release:	${RELEASE}
+	>Environment:
+	System: ${SYSTEM}
+	>Description:
+EOF
+
+MODESTRING="mode: ${MODE}"
+
+if [ "${MODE}" = "new" ]
+then
+	cat pkg-descr >> ${PR_FORM}
+else
+	echo -e ${DESCRIPTION} >> ${PR_FORM}
+
+	MODESTRING="${MODESTRING}, diff: ${DIFF_TYPE}"
+
+	if [ -n "${FILES_ADD}" ]
+	then
+		echo "" >> ${PR_FORM}	
+		echo "Added file(s):" >> ${PR_FORM}	
+		for file in ${FILES_ADD}
+		do
+			echo "- ${file}" >> ${PR_FORM}
+		done
+	fi
+
+	if [ -n "${FILES_DEL}" ]
+	then
+		echo "" >> ${PR_FORM}	
+		echo "Removed file(s):" >> ${PR_FORM}	
+		for file in ${FILES_DEL}
+		do
+			echo "- ${file}" >> ${PR_FORM}
+		done
+	fi
+
+	if [ "${CC}" != "" ]
+	then
+		echo >> ${PR_FORM}
+		echo "Port maintainer (${CC}) is cc'd." >> ${PR_FORM}
+	fi
+fi
+
+if [ "${COMMITTER}" = "yes" ]
+then
+    echo "" >> ${PR_FORM}
+    echo "SEND-PR: <Handy template to provide proof of cleanliness>" >> ${PR_FORM}
+    echo "portlint: " >> ${PR_FORM}
+    echo "testport: " >> ${PR_FORM}
+    echo "redports: " >> ${PR_FORM}
+fi
+
+cat >> ${PR_FORM} <<- EOF
+
+	Generated with FreeBSD Port Tools __VERSION__ (${MODESTRING})
+	>How-To-Repeat:
+	>Fix:
+EOF
+
+# Invoke send-pr(1)
+echo "===> Invoking send-pr(1) to submit a PR"
+PR_FORM="${PR_FORM}" /usr/bin/send-pr -a ${PATCH} ${SENDPR_ARGS}
+if [ $? -ne 0 ]
+then
+	echo "Error submitting PR"
+	rm -f ${TMPDIR:-/tmp}/pbad.*
+	rm -rf ${TEMPROOT} 
+	exit 1
+fi
+
+# Cleanup
+echo "===> Saving submitted PR, cleaning up"
+if [ -n "${ARCHIVE_DIR}" -a -d ${ARCHIVE_DIR} ]
+then
+	mv ${PATCH} ${ARCHIVE_DIR}
+fi
+rm -rf ${TEMPROOT}
+
+echo "===> Done"
+exit 0

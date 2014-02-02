@@ -1,0 +1,41 @@
+# port(1)
+# Front-end interface to Port Tools functions
+#
+# $Id: port.in,v 1.1 2003/10/21 05:22:31 skolobov Exp $
+#
+
+# Port Tools configuration file
+PORTTOOLS="${HOME}/.porttools"
+
+# Check to see the config file exists; generate one if not
+if [ ! -f ${PORTTOOLS} ]
+then
+	echo "===> Generating ${PORTTOOLS} configuration file"
+	cat > ${PORTTOOLS} <<- EOF
+	# FreeBSD Port Tools configuration file - see porttools(5)
+	# vim: ft=sh
+	EMAIL="${USER}@`hostname`"
+	FULLNAME="`pw usershow -n ${USER} | cut -d: -f8`"
+	ORGANIZATION=""
+	BUILDROOT="/tmp"
+	ARCHIVE_DIR=""
+	DIFF_MODE="SVN"
+	DIFF_VIEWER="more"
+	PORTLINT_FLAGS="abct"
+	PORTSDIR="/usr/ports"
+	EOF
+fi
+
+PORTSDIR="/usr/ports"
+
+# Reading configuration file
+. ${PORTTOOLS}
+
+# Port Tools scripts location
+SCRIPT_DIR="__PREFIX__/share/porttools"
+
+# Run specified command
+CMD="$1"
+shift
+[ -n "${CMD}" -a -r ${SCRIPT_DIR}/cmd_${CMD} ] || CMD="help"
+. ${SCRIPT_DIR}/cmd_${CMD}
