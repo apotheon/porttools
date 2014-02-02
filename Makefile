@@ -22,6 +22,7 @@ MAN5=		man/porttools.5
 PREFIX?=	~/pkg
 DATADIR?=	${PREFIX}/share/${PORTNAME}
 DOCSDIR?=	${PREFIX}/share/doc/${PORTNAME}
+MANPREFIX?= ${PREFIX}/share
 
 BSD_INSTALL_SCRIPT?=	install -m 555
 BSD_INSTALL_DATA?=	install -m 444
