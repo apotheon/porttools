@@ -2,8 +2,8 @@ FreeBSD Port Tools
 ==================
 
 
-INTRODUCTION
-============
+Introduction
+------------
 
 FreeBSD Port Tools consist of the several small scripts run from
 port(1) front-end:
@@ -22,8 +22,9 @@ FreeBSD Port Tools were originally available at http://sourceforge.net/projects/
 but went unmaintained for too long, so I decided to fork the project and put it
 on Github.
 
-USAGE
-=====
+Usage
+-----
+
 Let us assume you are interested in helping out with one of the ports.
 The most convenient way of doing that with the Port Tools is the following.
 Even though the Port Tools have 3 most of diff generation, the recommended is 
@@ -35,25 +36,25 @@ Let me give a quick overview:
    i.e. either maitain or send changes/updates to. Thus, it does not have
    to contain the whole FreeBSD Ports tree)
 
-   xmj@elf:~% cd ~/ports
-   xmj@elf:~/ports% svn co ipsvd
+   xmj@mx12:~% cd ~/ports
+   xmj@mx12:~/ports% svn co ipsvd
 
    ipsvd is the sample port name.
 
 2. Now, make your changes - e.g. change PORTVERSION from 0.6.0 to 0.6.1.
 
-   xmj@elf:~/ports/ipsvd% cd ipsvd
-   xmj@elf:~/ports/ipsvd% vim Makefile
+   xmj@mx12:~/ports/ipsvd% cd ipsvd
+   xmj@mx12:~/ports/ipsvd% vim Makefile
 
 3. At this moment we need to fetch the new distfile and run "make makesum" 
    to update the distinfo file. There is even simpler way to accomplish this 
    with the Port Tools version 0.50 or later:
 
-   xmj@elf:~/ports/ipsvd% port fetch
+   xmj@mx12:~/ports/ipsvd% port fetch
 
 4. Now we want to make sure that the port compiles, installs and works fine:
 
-   xmj@elf:~/ports/ipsvd% port test
+   xmj@mx12:~/ports/ipsvd% port test
 
 5. Once I am satisfied with the results, let us submit a PR 
    with the port update:
@@ -63,17 +64,17 @@ Let me give a quick overview:
 Now, this was a very simple case, and it did not show off all the features 
 of the Port Tools, so please check port(1) manual page for details.
  
-THANKS
-======
+Thanks
+------
 Several people have contributed ideas and/or code to the FreeBSD Port Tools,
 see THANKS file for details.
 
 TODO
-====
+----
 There are some improvements planned, see TODO file for details.
 
 DISCLAIMER
-==========
+----------
 
 This program is free software; you can redistribute it 
 and/or modify it under the terms of the BSD License 
