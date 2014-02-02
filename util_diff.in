@@ -145,8 +145,8 @@ else
 
 	# Generate patch
 	echo "===> Generating patch"
-	PKGNAME="`make -V PKGNAME`"
-	PATCH="${TEMPROOT}/${PKGNAME}.patch"
+	PORTVERSION="`make -V PORTVERSION`"
+	PATCH="${TEMPROOT}/${PORTNAME}-${PORTVERSION}.patch"
 	${DIFF_CMD} > ${PATCH}
 	#if [ $? -ne 0 ]
 	#then
