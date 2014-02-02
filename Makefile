@@ -9,25 +9,17 @@
 PORTNAME?=	porttools
 PORTVERSION?=	0.99
 DISTNAME?=	${PORTNAME}-${PORTVERSION}
-.if defined(PORTREVISION) && defined(PORTEPOCH)
-VERSIONSTRING=	${PORTVERSION}_${PORTREVISION},${PORTEPOCH}
-.elif defined(PORTREVISION)
-VERSIONSTRING=	${PORTVERSION}_${PORTREVISION}
-.elif defined(PORTEPOCH)
-VERSIONSTRING=	${PORTVERSION},${PORTEPOCH}
-.else
 VERSIONSTRING=	${PORTVERSION}
-.endif
 
-PROGRAMS=	port
-SCRIPTS=	cmd_commit cmd_create cmd_diff cmd_fetch cmd_getpr cmd_help \
-	 	cmd_install cmd_submit cmd_test cmd_upgrade util_diff
+PROGRAMS=	scripts/port
+SCRIPTS=	scripts/cmd_commit scripts/cmd_create scripts/cmd_diff scripts/cmd_fetch scripts/cmd_getpr scripts/cmd_help \
+		scripts/cmd_install scripts/cmd_submit scripts/cmd_test scripts/cmd_upgrade scripts/util_diff
 DOCS=		LICENSE NEWS README THANKS
-MAN1=		port.1 
-MAN5=		porttools.5 
+MAN1=		man/port.1
+MAN5=		man/porttools.5
 
 # Normally provided via bsd.port.mk infrastructure
-PREFIX?=	/pkg
+PREFIX?=	~/pkg
 DATADIR?=	${PREFIX}/share/${PORTNAME}
 DOCSDIR?=	${PREFIX}/share/doc/${PORTNAME}
 
@@ -42,7 +34,7 @@ all: ${PROGRAMS} ${SCRIPTS} Makefile
 
 .in:
 	sed -e 's%__VERSION__%${VERSIONSTRING}%;s,__PREFIX__,${PREFIX},' \
-		inc_header.in ${.IMPSRC} > ${.TARGET}
+		scripts/inc_header.in ${.IMPSRC} > ${.TARGET}
 	chmod a+x ${.TARGET}
 
 install: ${PROGRAMS} ${SCRIPTS}
@@ -59,24 +51,7 @@ install-docs:
 	${BSD_INSTALL_DATA} ${DOCS} ${DESTDIR}${DOCSDIR}
 
 clean:
-	rm -rf ${PROGRAMS} ${SCRIPTS} ${DISTNAME}*
-
-##
-## Maintainer section
-##
-distfile: ${DISTNAME}.tar.gz
-	cp ${DISTNAME}.tar.gz /FreeBSD/distfiles
-	
-release: ${DISTNAME}.tar.gz Makefile
-	sfupload ${DISTNAME}.tar.gz
-	rm -f ${DISTNAME}.tar.gz
-
-${DISTNAME}.tar.gz: ${PROGRAMS} ${SCRIPTS} Makefile
-	rm -rf ${DISTNAME}
-	mkdir ${DISTNAME}
-	cp Makefile *.in ${DOCS} ${MAN1} ${MAN5} .todo ${DISTNAME}
-	tar cvzf ${DISTNAME}.tar.gz ${DISTNAME}
-	rm -rf ${DISTNAME}
+	rm -rf ${PROGRAMS} ${SCRIPTS}
 
 TODO: .todo Makefile
 	devtodo --filter -done,+children --TODO
