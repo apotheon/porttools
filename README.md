@@ -87,6 +87,6 @@ There are some improvements planned, see `TODO` file for details.
 DISCLAIMER
 ----------
 
-This program is free software; you can redistribute it 
-and/or modify it under the terms of the BSD License 
-which is distributed with the software in the file LICENSE.
+This program is free software; you can redistribute it and/or modify it under
+the terms of the 2-clause Simplified BSD License which is distributed with the
+software in the file LICENSE.
