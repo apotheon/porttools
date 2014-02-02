@@ -62,7 +62,7 @@ done
 PORT_FLAGS="$*"
 echo "===> flags: ${PORT_FLAGS}"
 
-# See if sudo(1) if needed
+# See if sudo(1) is needed
 SUDO=""
 [ `/usr/bin/id -u` = 0 ] || SUDO="sudo"
 
