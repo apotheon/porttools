@@ -135,7 +135,7 @@ fi
 # Go through the build phases
 for PHASE in build install package deinstall
 do
-	SUDO="${SU_CMD}"
+	SUDO="sudo"
 	[ "${PHASE}" = "build" ] && SUDO=""
 
 	if [ "${PHASE}" = "deinstall" ]
@@ -185,7 +185,7 @@ do
 		echo "===> Cleaning up"
 		[ "${USE_X_PREFIX}" != "yes" -a \
 		  "${PREFIX}" != "${LOCALBASE}" ] && ${SUDO} rm -rf ${PREFIX}
-		sudo rm -rf ${PKG_DBDIR}
+		${SUDO} rm -rf ${PKG_DBDIR}
 		exit 1
 	fi
 
