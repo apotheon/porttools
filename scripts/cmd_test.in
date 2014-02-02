@@ -210,7 +210,7 @@ fi
 if [ "${CLEAN_AFTER}" = "yes" ]
 then
 	echo "===> Cleaning up after port test"
-	make clean
+	${SUDO} make clean
 	if [ "${USE_X_PREFIX}" != "yes" -a -d ${PREFIX} ] 
 	then
 		echo "===>  Removing existing ${PREFIX} dir"
