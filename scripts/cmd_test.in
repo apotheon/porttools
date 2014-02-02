@@ -139,22 +139,35 @@ do
 
 	if [ "${PHASE}" = "deinstall" ]
 	then
-		# Before deinstalling, check pkg_info output
-		echo "===> Checking pkg_info"
-		PKG_DBDIR=${PKG_DBDIR} pkg_info | grep ${PKGNAME}
+        PKGNG="`make -V WITH_PKGNG`"
+        if [ ! -z ${PKGNG} ]
+        then
+		    echo "===>  Checking pkg info"
+            pkg info -f ${PKGNAME}
+            echo "===>  Checking shared library dependencies"
+            pkg query %B ${PKGNAME} |sed -e "s,^,${PREFIX}," | \
+                xargs ldd 2>&1 | \
+					grep -v "not a dynamic executable" | \
+						grep '=>' | awk '{print $3;}' | sort -u
 
-		# XXX Dirty hack to avoid checking the whole
-		# LOCALBASE or X11BASE trees
-		PLIST="${PKG_DBDIR}/${PKGNAME}/+CONTENTS"
-		if [ "${USE_X_PREFIX}" != "yes" -a -r ${PLIST} ]
-		then
-			# Also check ldd(1) output on binaries
-			echo "===> Checking shared library dependencies"
-			grep -v "^@" ${PLIST} | \
-				sed -e "s,^,${PREFIX}/," | \
-				xargs ldd 2>&1 | \
-				grep -v "not a dynamic executable" | \
-				grep '=>' | awk '{print $3;}' | sort -u
+        else
+		# Before deinstalling, check pkg_info output
+			echo "===>  Checking pkg_info"
+			PKG_DBDIR=${PKG_DBDIR} pkg_info | grep ${PKGNAME}
+
+			# XXX Dirty hack to avoid checking the whole
+			# LOCALBASE or X11BASE trees
+			PLIST="${PKG_DBDIR}/${PKGNAME}/+CONTENTS"
+			if [ "${USE_X_PREFIX}" != "yes" -a -r ${PLIST} ]
+			then
+				# Also check ldd(1) output on binaries
+				echo "===>  Checking shared library dependencies"
+				grep -v "^@" ${PLIST} | \
+					sed -e "s,^,${PREFIX}/," | \
+					xargs ldd 2>&1 | \
+					grep -v "not a dynamic executable" | \
+						grep '=>' | awk '{print $3;}' | sort -u
+			fi
 		fi
 	fi
 
